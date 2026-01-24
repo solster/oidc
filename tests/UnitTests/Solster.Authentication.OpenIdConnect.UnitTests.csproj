@@ -15,5 +15,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Solster.Authentication.OpenIdConnect.csproj" />
+    <ProjectReference Include="..\InMemory\Solster.Authentication.OpenIdConnect.InMemory.csproj" />
   </ItemGroup>
 </Project>

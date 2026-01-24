@@ -2,7 +2,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Security.Cryptography;
 using Solster.Authentication.OpenIdConnect.Abstractions;
 
-namespace Solster.Authentication.OpenIdConnect.UnitTests;
+namespace Solster.Authentication.OpenIdConnect;
 
 // Test-only in-memory signing key store
 public class InMemorySigningKeyStore : ISigningKeyStore, IDisposable

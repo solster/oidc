@@ -10,6 +10,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/IntegrationTests/Solster.Authentication.OpenIdConnect.IntegrationTests.csproj" />
+    <Project Path="tests/InMemory/Solster.Authentication.OpenIdConnect.InMemory.csproj" />
     <Project Path="tests/UnitTests/Solster.Authentication.OpenIdConnect.UnitTests.csproj" />
   </Folder>
 </Solution>

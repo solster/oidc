@@ -54,6 +54,13 @@ public class AuthorizeEndpointHandler(
             return Results.BadRequest(new { error = "invalid_request", error_description = "redirect_uri is required" });
         }
 
+        // RFC 6749 §3.1.2: Redirect URI MUST NOT contain a fragment component
+        if (redirectUri.Contains('#'))
+        {
+            logger.LogWarning("Redirect URI contains fragment for client {ClientId}", clientId);
+            return Results.BadRequest(new { error = "invalid_request", error_description = "redirect_uri must not contain a fragment component" });
+        }
+
         // Validate client
         var client = await clientStore.GetByClientIdAsync(clientId, cancellationToken);
         if (client == null)
@@ -62,8 +69,8 @@ public class AuthorizeEndpointHandler(
             return Results.BadRequest(new { error = "invalid_client", error_description = "Client not found" });
         }
 
-        // Validate redirect URI matches registered URIs
-        if (!client.RedirectUris.Any(uri => uri.Equals(redirectUri, StringComparison.OrdinalIgnoreCase)))
+        // RFC 6749 §3.1.2.2: Redirect URI matching MUST be exact (case-sensitive)
+        if (!client.RedirectUris.Any(uri => uri.Equals(redirectUri, StringComparison.Ordinal)))
         {
             logger.LogWarning("Redirect URI mismatch for client {ClientId}. Provided: {RedirectUri}", clientId, redirectUri);
             return Results.BadRequest(new { error = "invalid_request", error_description = "redirect_uri does not match any registered URIs" });
@@ -71,8 +78,14 @@ public class AuthorizeEndpointHandler(
 
         // From this point, we can redirect errors to the client's redirect_uri
 
-        // Validate scope contains 'openid'
-        var scopes = scope.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
+        // Validate scope contains 'openid' and remove duplicates (RFC 6749 §3.3)
+        var scopes = scope.Split(' ', StringSplitOptions.RemoveEmptyEntries).Distinct().ToList();
+        if (scopes.Count == 0)
+        {
+            logger.LogWarning("Empty scope for client {ClientId}", clientId);
+            return RedirectWithError(redirectUri, "invalid_request", "scope parameter is required", state);
+        }
+
         if (!scopes.Contains("openid"))
         {
             logger.LogWarning("Missing 'openid' scope for client {ClientId}", clientId);
@@ -207,6 +220,10 @@ public class AuthorizeEndpointHandler(
         if (String.IsNullOrEmpty(input))
             return false;
 
+        // RFC 7636 §4.3: code_challenge MUST be 43-128 characters
+        if (input.Length < 43 || input.Length > 128)
+            return false;
+
         // Base64url characters: A-Z, a-z, 0-9, -, _
         foreach (var c in input)
         {
@@ -219,6 +236,7 @@ public class AuthorizeEndpointHandler(
 
     /// <summary>
     /// Validates a PKCE code_verifier against a code_challenge using S256 method.
+    /// Uses constant-time comparison to prevent timing attacks.
     /// </summary>
     public static Boolean ValidatePkceChallenge(String codeVerifier, String codeChallenge, String codeChallengeMethod)
     {
@@ -229,11 +247,20 @@ public class AuthorizeEndpointHandler(
                 .Replace("+", "-")
                 .Replace("/", "_")
                 .Replace("=", "");
-            return computedChallenge == codeChallenge;
+            
+            // Use constant-time comparison to prevent timing attacks
+            return CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(computedChallenge),
+                Encoding.UTF8.GetBytes(codeChallenge)
+            );
         }
         else if (codeChallengeMethod == "plain")
         {
-            return codeVerifier == codeChallenge;
+            // Use constant-time comparison to prevent timing attacks
+            return CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(codeVerifier),
+                Encoding.UTF8.GetBytes(codeChallenge)
+            );
         }
 
         return false;

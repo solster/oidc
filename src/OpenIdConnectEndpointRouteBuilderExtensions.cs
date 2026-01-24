@@ -77,6 +77,28 @@ public static class OpenIdConnectEndpointRouteBuilderExtensions
             return await handler.HandleAsync(context, cancellationToken);
         }).WithDisplayName("OpenIdConnectAuthorize");
 
+        // Map Token endpoint - RFC 6749 §3.2
+        endpoints.MapPost(options.TokenPath, async (HttpContext context, CancellationToken cancellationToken) =>
+        {
+            var clientStore = serviceProvider.GetRequiredService<IClientStore>();
+            var codeStore = serviceProvider.GetRequiredService<IAuthorizationCodeStore>();
+            var claimsProvider = serviceProvider.GetRequiredService<ITokenClaimsProvider>();
+            var tokenIssuer = serviceProvider.GetRequiredService<ITokenIssuer>();
+            var accessTokenStore = serviceProvider.GetRequiredService<IAccessTokenStore>();
+            var handlerLogger = loggerFactory?.CreateLogger<TokenEndpointHandler>()!;
+
+            var handler = new TokenEndpointHandler(
+                clientStore,
+                codeStore,
+                claimsProvider,
+                tokenIssuer,
+                accessTokenStore,
+                options,
+                handlerLogger);
+
+            return await handler.HandleAsync(context, cancellationToken);
+        }).WithDisplayName("OpenIdConnectToken");
+
         return endpoints;
     }
 

@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Solster.Authentication.OpenIdConnect.Abstractions;
 using Solster.Authentication.OpenIdConnect.Models;
 
-namespace Solster.Authentication.OpenIdConnect.IntegrationTests;
+namespace Solster.Authentication.OpenIdConnect;
 
 public class InMemoryResourceOwnerAuthenticator : IResourceOwnerAuthenticator
 {

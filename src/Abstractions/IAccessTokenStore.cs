@@ -31,4 +31,13 @@ public interface IAccessTokenStore
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>True if revoked, false otherwise.</returns>
     Task<Boolean> IsRevokedAsync(String tokenId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Revokes all access tokens issued from a specific authorization code.
+    /// Required by RFC 6749 §10.5 when authorization code reuse is detected.
+    /// </summary>
+    /// <param name="authorizationCode">The authorization code value.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The number of tokens revoked.</returns>
+    Task<Int32> RevokeTokensByAuthorizationCodeAsync(String authorizationCode, CancellationToken cancellationToken = default);
 }

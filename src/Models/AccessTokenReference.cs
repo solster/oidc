@@ -27,6 +27,12 @@ public class AccessTokenReference
     public String ClientId { get; set; } = String.Empty;
 
     /// <summary>
+    /// The authorization code that was used to issue this token.
+    /// Used for RFC 6749 §10.5 compliance: revoke all tokens when code is reused.
+    /// </summary>
+    public String? AuthorizationCode { get; set; }
+
+    /// <summary>
     /// When this token expires.
     /// </summary>
     public DateTimeOffset ExpiresAt { get; set; }

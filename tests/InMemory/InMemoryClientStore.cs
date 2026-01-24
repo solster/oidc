@@ -1,7 +1,7 @@
 using Solster.Authentication.OpenIdConnect.Abstractions;
 using Solster.Authentication.OpenIdConnect.Models;
 
-namespace Solster.Authentication.OpenIdConnect.UnitTests;
+namespace Solster.Authentication.OpenIdConnect;
 
 public class InMemoryClientStore : IClientStore
 {
