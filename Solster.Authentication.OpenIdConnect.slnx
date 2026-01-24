@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/examples/" />
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Solster.Authentication.OpenIdConnect.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/IntegrationTests/Solster.Authentication.OpenIdConnect.IntegrationTests.csproj" />
+    <Project Path="tests/UnitTests/Solster.Authentication.OpenIdConnect.UnitTests.csproj" />
+  </Folder>
+</Solution>
