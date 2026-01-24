@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Main Package Dependencies -->
+    <PackageVersion Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.2.1" />
     <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.2.1" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.2.1" />
     

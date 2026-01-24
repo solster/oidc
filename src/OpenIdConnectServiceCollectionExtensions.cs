@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Solster.Authentication.OpenIdConnect.Abstractions;
+using Solster.Authentication.OpenIdConnect.Infrastructure;
 using Solster.Authentication.OpenIdConnect.Signing;
 
 namespace Solster.Authentication.OpenIdConnect;
@@ -24,6 +25,10 @@ public static class OpenIdConnectServiceCollectionExtensions
         // Keys can come from Azure KeyVault (via App Configuration), local config, environment variables, etc.
         services.TryAddSingleton<ISigningKeyStore, ConfigurationSigningKeyStore>();
 
+        // Register JWKS configuration manager as singleton for caching and performance
+        // This prevents per-request JWKS fetches and handles network failures gracefully
+        services.TryAddSingleton<JwksConfigurationManager>();
+
         return services;
     }
 
@@ -39,6 +44,10 @@ public static class OpenIdConnectServiceCollectionExtensions
         // Register configuration-based signing key store
         // Keys can come from Azure KeyVault (via App Configuration), local config, environment variables, etc.
         services.TryAddSingleton<ISigningKeyStore, ConfigurationSigningKeyStore>();
+
+        // Register JWKS configuration manager as singleton for caching and performance
+        // This prevents per-request JWKS fetches and handles network failures gracefully
+        services.TryAddSingleton<JwksConfigurationManager>();
 
         return services;
     }

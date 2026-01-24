@@ -99,6 +99,24 @@ public static class OpenIdConnectEndpointRouteBuilderExtensions
             return await handler.HandleAsync(context, cancellationToken);
         }).WithDisplayName("OpenIdConnectToken");
 
+        // Map UserInfo endpoint - OIDC Core §5.3
+        endpoints.MapMethods(options.UserInfoPath, new[] { "GET", "POST" }, async (HttpContext context, CancellationToken cancellationToken) =>
+        {
+            var accessTokenStore = serviceProvider.GetRequiredService<IAccessTokenStore>();
+            var claimsProvider = serviceProvider.GetRequiredService<ITokenClaimsProvider>();
+            var signingKeyStore = serviceProvider.GetRequiredService<ISigningKeyStore>();
+            var handlerLogger = loggerFactory?.CreateLogger<UserInfoEndpointHandler>()!;
+
+            var handler = new UserInfoEndpointHandler(
+                accessTokenStore,
+                claimsProvider,
+                signingKeyStore,
+                options,
+                handlerLogger);
+
+            return await handler.HandleAsync(context, cancellationToken);
+        }).WithDisplayName("OpenIdConnectUserInfo");
+
         return endpoints;
     }
 

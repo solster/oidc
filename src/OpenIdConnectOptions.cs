@@ -5,6 +5,10 @@ public class OpenIdConnectOptions
     // Issuer and Origin
     public String Issuer { get; set; } = String.Empty; // required
     public String? PublicOrigin { get; set; }
+    
+    // Audience Validation
+    public String UserInfoAudience { get; set; } = "userinfo"; // Default audience for UserInfo endpoint
+    public Boolean ValidateUserInfoAudience { get; set; } = true; // Enable audience validation by default
 
     // Endpoint Paths
     public String AuthorizationPath { get; set; } = "/connect/authorize";
