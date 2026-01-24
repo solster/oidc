@@ -32,12 +32,14 @@ public static class OpenIdConnectEndpointRouteBuilderExtensions
                 AuthorizationEndpoint = origin.TrimEnd('/') + options.AuthorizationPath,
                 TokenEndpoint = origin.TrimEnd('/') + options.TokenPath,
                 UserInfoEndpoint = origin.TrimEnd('/') + options.UserInfoPath,
+                RevocationEndpoint = origin.TrimEnd('/') + options.RevocationPath,
                 JwksUri = origin.TrimEnd('/') + options.JwksPath,
                 ResponseTypesSupported = options.SupportedResponseTypes,
                 SubjectTypesSupported = options.SupportedSubjectTypes,
                 IdTokenSigningAlgValuesSupported = options.SupportedIdTokenSigningAlgValues,
                 ScopesSupported = options.SupportedScopes,
-                TokenEndpointAuthMethodsSupported = options.SupportedTokenEndpointAuthMethods
+                TokenEndpointAuthMethodsSupported = options.SupportedTokenEndpointAuthMethods,
+                RevocationEndpointAuthMethodsSupported = ["client_secret_post", "client_secret_basic"]
             };
 
             context.Response.Headers.CacheControl = $"public, max-age={(Int32)options.DiscoveryCacheDuration.TotalSeconds}";
@@ -116,6 +118,23 @@ public static class OpenIdConnectEndpointRouteBuilderExtensions
 
             return await handler.HandleAsync(context, cancellationToken);
         }).WithDisplayName("OpenIdConnectUserInfo");
+
+        // Map Token Revocation endpoint - RFC 7009
+        endpoints.MapPost(options.RevocationPath, async (HttpContext context, CancellationToken cancellationToken) =>
+        {
+            var clientStore = serviceProvider.GetRequiredService<IClientStore>();
+            var accessTokenStore = serviceProvider.GetRequiredService<IAccessTokenStore>();
+            var refreshTokenStore = serviceProvider.GetRequiredService<IRefreshTokenStore>();
+            var handlerLogger = loggerFactory?.CreateLogger<TokenRevocationEndpointHandler>()!;
+
+            var handler = new TokenRevocationEndpointHandler(
+                clientStore,
+                accessTokenStore,
+                refreshTokenStore,
+                handlerLogger);
+
+            return await handler.HandleAsync(context, cancellationToken);
+        }).WithDisplayName("OpenIdConnectRevocation");
 
         return endpoints;
     }
