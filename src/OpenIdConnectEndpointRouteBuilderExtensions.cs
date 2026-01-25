@@ -33,13 +33,15 @@ public static class OpenIdConnectEndpointRouteBuilderExtensions
                 TokenEndpoint = origin.TrimEnd('/') + options.TokenPath,
                 UserInfoEndpoint = origin.TrimEnd('/') + options.UserInfoPath,
                 RevocationEndpoint = origin.TrimEnd('/') + options.RevocationPath,
+                IntrospectionEndpoint = origin.TrimEnd('/') + options.IntrospectionPath,
                 JwksUri = origin.TrimEnd('/') + options.JwksPath,
                 ResponseTypesSupported = options.SupportedResponseTypes,
                 SubjectTypesSupported = options.SupportedSubjectTypes,
                 IdTokenSigningAlgValuesSupported = options.SupportedIdTokenSigningAlgValues,
                 ScopesSupported = options.SupportedScopes,
                 TokenEndpointAuthMethodsSupported = options.SupportedTokenEndpointAuthMethods,
-                RevocationEndpointAuthMethodsSupported = ["client_secret_post", "client_secret_basic"]
+                RevocationEndpointAuthMethodsSupported = ["client_secret_post", "client_secret_basic"],
+                IntrospectionEndpointAuthMethodsSupported = ["client_secret_post", "client_secret_basic"]
             };
 
             context.Response.Headers.CacheControl = $"public, max-age={(Int32)options.DiscoveryCacheDuration.TotalSeconds}";
@@ -135,6 +137,24 @@ public static class OpenIdConnectEndpointRouteBuilderExtensions
 
             return await handler.HandleAsync(context, cancellationToken);
         }).WithDisplayName("OpenIdConnectRevocation");
+
+        // Map Token Introspection endpoint - RFC 7662
+        endpoints.MapPost(options.IntrospectionPath, async (HttpContext context, CancellationToken cancellationToken) =>
+        {
+            var clientStore = serviceProvider.GetRequiredService<IClientStore>();
+            var accessTokenStore = serviceProvider.GetRequiredService<IAccessTokenStore>();
+            var refreshTokenStore = serviceProvider.GetRequiredService<IRefreshTokenStore>();
+            var handlerLogger = loggerFactory?.CreateLogger<TokenIntrospectionEndpointHandler>()!;
+
+            var handler = new TokenIntrospectionEndpointHandler(
+                clientStore,
+                accessTokenStore,
+                refreshTokenStore,
+                options,
+                handlerLogger);
+
+            return await handler.HandleAsync(context, cancellationToken);
+        }).WithDisplayName("OpenIdConnectIntrospection");
 
         return endpoints;
     }

@@ -33,6 +33,14 @@ public interface IAccessTokenStore
     Task<Boolean> IsRevokedAsync(String tokenId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets an access token reference by its token ID (jti claim).
+    /// </summary>
+    /// <param name="tokenId">The token ID (jti claim value).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The access token reference if found, otherwise null.</returns>
+    Task<AccessTokenReference?> GetByTokenIdAsync(String tokenId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Revokes all access tokens issued from a specific authorization code.
     /// Required by RFC 6749 §10.5 when authorization code reuse is detected.
     /// </summary>

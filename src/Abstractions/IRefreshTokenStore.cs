@@ -34,6 +34,14 @@ public interface IRefreshTokenStore
     Task<Boolean> RevokeTokenAsync(String tokenValue, String? reason = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets a refresh token by its token hash.
+    /// </summary>
+    /// <param name="tokenHash">The token hash.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The refresh token if found, otherwise null.</returns>
+    Task<RefreshToken?> GetByTokenHashAsync(String tokenHash, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Revokes all refresh tokens for a specific client and user.
     /// </summary>
     /// <param name="userId">The user's subject identifier.</param>

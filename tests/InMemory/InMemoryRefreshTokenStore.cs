@@ -55,6 +55,12 @@ public class InMemoryRefreshTokenStore : IRefreshTokenStore
         return Task.FromResult(false);
     }
 
+    public Task<RefreshToken?> GetByTokenHashAsync(String tokenHash, CancellationToken cancellationToken = default)
+    {
+        _tokens.TryGetValue(tokenHash, out var token);
+        return Task.FromResult(token);
+    }
+
     public Task<Int32> RevokeAllForClientAsync(String userId, String clientId, String? reason = null, CancellationToken cancellationToken = default)
     {
         var tokensToRevoke = _tokens.Values

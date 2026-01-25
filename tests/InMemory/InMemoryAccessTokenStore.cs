@@ -25,6 +25,12 @@ public class InMemoryAccessTokenStore : IAccessTokenStore
         return Task.FromResult(_revokedTokens.Contains(tokenId));
     }
 
+    public Task<AccessTokenReference?> GetByTokenIdAsync(String tokenId, CancellationToken cancellationToken = default)
+    {
+        _tokens.TryGetValue(tokenId, out var token);
+        return Task.FromResult(token);
+    }
+
     public Task<Int32> RevokeTokensByAuthorizationCodeAsync(String authorizationCode, CancellationToken cancellationToken = default)
     {
         var tokensToRevoke = _tokens.Values

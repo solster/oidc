@@ -16,6 +16,7 @@ public class OpenIdConnectOptions
     public String UserInfoPath { get; set; } = "/connect/userinfo";
     public String JwksPath { get; set; } = "/.well-known/jwks.json";
     public String RevocationPath { get; set; } = "/connect/revoke";
+    public String IntrospectionPath { get; set; } = "/connect/introspect";
 
     // UI Paths
     public String LoginPath { get; set; } = "/login";

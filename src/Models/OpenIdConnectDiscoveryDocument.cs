@@ -22,6 +22,9 @@ public class OpenIdConnectDiscoveryDocument
     [JsonPropertyName("revocation_endpoint")]
     public String? RevocationEndpoint { get; set; }
 
+    [JsonPropertyName("introspection_endpoint")]
+    public String? IntrospectionEndpoint { get; set; }
+
     [JsonPropertyName("jwks_uri")]
     public String JwksUri { get; set; } = String.Empty;
 
@@ -42,4 +45,7 @@ public class OpenIdConnectDiscoveryDocument
 
     [JsonPropertyName("revocation_endpoint_auth_methods_supported")]
     public List<String>? RevocationEndpointAuthMethodsSupported { get; set; }
+
+    [JsonPropertyName("introspection_endpoint_auth_methods_supported")]
+    public List<String>? IntrospectionEndpointAuthMethodsSupported { get; set; }
 }
