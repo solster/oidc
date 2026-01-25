@@ -35,6 +35,12 @@ public class OAuthClient
     public List<String> RedirectUris { get; set; } = new();
 
     /// <summary>
+    /// Allowed post-logout redirect URIs for this client.
+    /// Per OIDC Session Management 1.0 §5.
+    /// </summary>
+    public List<String> PostLogoutRedirectUris { get; set; } = new();
+
+    /// <summary>
     /// Allowed scopes for this client.
     /// </summary>
     public List<String> AllowedScopes { get; set; } = new();

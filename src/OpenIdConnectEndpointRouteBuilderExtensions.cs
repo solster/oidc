@@ -34,6 +34,7 @@ public static class OpenIdConnectEndpointRouteBuilderExtensions
                 UserInfoEndpoint = origin.TrimEnd('/') + options.UserInfoPath,
                 RevocationEndpoint = origin.TrimEnd('/') + options.RevocationPath,
                 IntrospectionEndpoint = origin.TrimEnd('/') + options.IntrospectionPath,
+                EndSessionEndpoint = origin.TrimEnd('/') + options.EndSessionPath,
                 JwksUri = origin.TrimEnd('/') + options.JwksPath,
                 ResponseTypesSupported = options.SupportedResponseTypes,
                 SubjectTypesSupported = options.SupportedSubjectTypes,
@@ -155,6 +156,22 @@ public static class OpenIdConnectEndpointRouteBuilderExtensions
 
             return await handler.HandleAsync(context, cancellationToken);
         }).WithDisplayName("OpenIdConnectIntrospection");
+
+        // Map End Session endpoint - OIDC Session Management 1.0 §5
+        endpoints.MapMethods(options.EndSessionPath, new[] { "GET", "POST" }, async (HttpContext context, CancellationToken cancellationToken) =>
+        {
+            var clientStore = serviceProvider.GetRequiredService<IClientStore>();
+            var signingKeyStore = serviceProvider.GetRequiredService<ISigningKeyStore>();
+            var handlerLogger = loggerFactory?.CreateLogger<EndSessionEndpointHandler>()!;
+
+            var handler = new EndSessionEndpointHandler(
+                clientStore,
+                signingKeyStore,
+                options,
+                handlerLogger);
+
+            return await handler.HandleAsync(context, cancellationToken);
+        }).WithDisplayName("OpenIdConnectEndSession");
 
         return endpoints;
     }

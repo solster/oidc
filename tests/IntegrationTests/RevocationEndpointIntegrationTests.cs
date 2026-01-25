@@ -187,6 +187,83 @@ public class RevocationEndpointIntegrationTests
         body.Should().Contain("application/x-www-form-urlencoded");
     }
 
+    [Fact]
+    public async Task Revoke_TokenOwnedByDifferentClient_Returns200WithoutRevoking()
+    {
+        using var host = await CreateTestHost();
+        var client = host.GetTestClient();
+        client.BaseAddress = new Uri("https://issuer.test");
+
+        // Create a token owned by a different client
+        var keyStore = host.Services.GetRequiredService<ISigningKeyStore>();
+        var accessToken = CreateAccessToken("user123", "other-client", new[] { "openid" }, keyStore);
+        var jti = ExtractJti(accessToken);
+
+        // Store the token under "other-client"
+        var tokenStore = host.Services.GetRequiredService<IAccessTokenStore>();
+        await tokenStore.SaveTokenAsync(new AccessTokenReference
+        {
+            TokenId = jti,
+            UserId = "user123",
+            ClientId = "other-client", // Different client owns this token
+            ExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+
+        // "test-client" tries to revoke "other-client"'s token
+        var formData = new Dictionary<String, String>
+        {
+            ["token"] = accessToken,
+            ["token_type_hint"] = "access_token",
+            ["client_id"] = "test-client",
+            ["client_secret"] = "test-secret"
+        };
+
+        var response = await client.PostAsync("/connect/revoke", new FormUrlEncodedContent(formData));
+
+        // RFC 7009 §2.2: Return 200 OK (silent failure to prevent token scanning)
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Verify token was NOT actually revoked (still valid)
+        var isRevoked = await tokenStore.IsRevokedAsync(jti);
+        isRevoked.Should().BeFalse("token should not be revoked since client doesn't own it");
+    }
+
+    private static String CreateAccessToken(
+        String userId,
+        String clientId,
+        String[] scopes,
+        ISigningKeyStore keyStore)
+    {
+        var signingCredentials = keyStore.GetCurrentSigningCredentials();
+        
+        var claims = new List<System.Security.Claims.Claim>
+        {
+            new System.Security.Claims.Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub, userId),
+            new System.Security.Claims.Claim(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new System.Security.Claims.Claim("scope", String.Join(" ", scopes)),
+            new System.Security.Claims.Claim("client_id", clientId)
+        };
+
+        var token = new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
+            issuer: "https://issuer.test",
+            audience: "https://issuer.test",
+            claims: claims,
+            notBefore: DateTime.UtcNow,
+            expires: DateTime.UtcNow.AddHours(1),
+            signingCredentials: signingCredentials
+        );
+
+        return new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private static String ExtractJti(String jwt)
+    {
+        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+        var token = handler.ReadJwtToken(jwt);
+        return token.Claims.First(c => c.Type == System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Jti).Value;
+    }
+
     private static async Task<IHost> CreateTestHost()
     {
         var host = await new HostBuilder()

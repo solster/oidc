@@ -77,8 +77,8 @@ public class TokenRevocationEndpointHandler(
                 statusCode: StatusCodes.Status401Unauthorized);
         }
 
-        // Revoke the token
-        await RevokeTokenAsync(request.Token, request.TokenTypeHint, cancellationToken);
+        // Revoke the token (with ownership validation)
+        await RevokeTokenAsync(request.Token, request.TokenTypeHint, client, cancellationToken);
 
         logger.LogInformation("Token revoked for client {ClientId} (hint: {TokenTypeHint})", 
             request.ClientId, request.TokenTypeHint ?? "none");
@@ -91,12 +91,30 @@ public class TokenRevocationEndpointHandler(
     /// <summary>
     /// Revokes a token by attempting to revoke it from both access and refresh token stores.
     /// Uses token_type_hint to optimize lookup when provided.
-    /// Per RFC 7009 §2.1: The server determines whether the hint is correct and may ignore it.
+    /// Per RFC 7009 §2.1: The server validates that the client is authorized to revoke the particular token.
+    /// Per RFC 7009 §2.2: Returns success even if token not found or client not authorized (prevents token scanning).
     /// </summary>
-    private async Task RevokeTokenAsync(String token, String? tokenTypeHint, CancellationToken cancellationToken)
+    private async Task RevokeTokenAsync(
+        String token, 
+        String? tokenTypeHint, 
+        OAuthClient client,
+        CancellationToken cancellationToken)
     {
         try
         {
+            // RFC 7009 §2.1: Verify client is authorized to revoke this token
+            // Try to find and validate ownership before revoking
+            var isAuthorized = await ValidateTokenOwnershipAsync(token, tokenTypeHint, client.ClientId, cancellationToken);
+            
+            if (!isAuthorized)
+            {
+                // RFC 7009 §2.2: Silent failure - don't reveal token doesn't exist or isn't owned by client
+                logger.LogWarning(
+                    "Client {ClientId} attempted to revoke token they don't own or token doesn't exist",
+                    client.ClientId);
+                return; // Return success (200 OK) without actually revoking
+            }
+
             // Use hint to optimize - try hinted store first
             if (tokenTypeHint == "access_token")
             {
@@ -128,5 +146,88 @@ public class TokenRevocationEndpointHandler(
             // Log the error but don't expose it to the client
             logger.LogWarning(ex, "Error during token revocation (continuing per RFC 7009 §2.2)");
         }
+    }
+
+    /// <summary>
+    /// Validates that the requesting client owns the token being revoked.
+    /// Per RFC 7009 §2.1: Authorization server verifies client is authorized to revoke the token.
+    /// </summary>
+    private async Task<Boolean> ValidateTokenOwnershipAsync(
+        String token,
+        String? tokenTypeHint,
+        String clientId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Check access token ownership (parse JWT to get jti, then check store)
+            if (tokenTypeHint == "access_token" || String.IsNullOrEmpty(tokenTypeHint))
+            {
+                var tokenId = ExtractJtiFromToken(token);
+                if (!String.IsNullOrEmpty(tokenId))
+                {
+                    var accessToken = await accessTokenStore.GetByTokenIdAsync(tokenId, cancellationToken);
+                    if (accessToken != null)
+                    {
+                        return accessToken.ClientId == clientId;
+                    }
+                }
+            }
+
+            // Check refresh token ownership
+            if (tokenTypeHint == "refresh_token" || String.IsNullOrEmpty(tokenTypeHint))
+            {
+                var refreshToken = await refreshTokenStore.GetByTokenHashAsync(token, cancellationToken);
+                if (refreshToken != null)
+                {
+                    return refreshToken.ClientId == clientId;
+                }
+            }
+
+            // Token not found - return false (silent failure per RFC 7009 §2.2)
+            return false;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Error validating token ownership for client {ClientId}", clientId);
+            return false; // Fail closed - deny if we can't verify
+        }
+    }
+
+    /// <summary>
+    /// Extracts the jti (JWT ID) claim from an access token for lookup.
+    /// Returns null if token is not a valid JWT.
+    /// </summary>
+    private String? ExtractJtiFromToken(String token)
+    {
+        try
+        {
+            var parts = token.Split('.');
+            if (parts.Length != 3)
+                return null;
+
+            var payload = parts[1];
+            // Add padding if needed
+            switch (payload.Length % 4)
+            {
+                case 2: payload += "=="; break;
+                case 3: payload += "="; break;
+            }
+
+            var jsonBytes = Convert.FromBase64String(payload.Replace('-', '+').Replace('_', '/'));
+            var json = System.Text.Encoding.UTF8.GetString(jsonBytes);
+            
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("jti", out var jtiElement))
+            {
+                return jtiElement.GetString();
+            }
+        }
+        catch
+        {
+            // Ignore parsing errors - not a valid JWT
+        }
+
+        return null;
     }
 }

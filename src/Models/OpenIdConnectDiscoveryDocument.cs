@@ -25,6 +25,9 @@ public class OpenIdConnectDiscoveryDocument
     [JsonPropertyName("introspection_endpoint")]
     public String? IntrospectionEndpoint { get; set; }
 
+    [JsonPropertyName("end_session_endpoint")]
+    public String? EndSessionEndpoint { get; set; }
+
     [JsonPropertyName("jwks_uri")]
     public String JwksUri { get; set; } = String.Empty;
 
